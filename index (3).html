@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TipZone - אליפות ההמלצות</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0f1117; font-family: Heebo, sans-serif; direction: rtl; color: #f0f0f0; }
+.loading-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #6b7899; font-size: 18px; }
+.toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: #1e2530; color: #fff; padding: 12px 24px; border-radius: 100px; font-size: 14px; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.5); white-space: nowrap; }
+.toast-error { background: #7f1d1d; }
+.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f1117 0%, #1a2235 100%); padding: 24px; }
+.auth-card { background: #161b27; border-radius: 24px; padding: 40px 32px; width: 100%; max-width: 380px; border: 1px solid #2a3347; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.logo-block { text-align: center; margin-bottom: 32px; }
+.logo-icon { font-size: 48px; display: block; margin-bottom: 8px; }
+.logo-title { font-size: 32px; font-weight: 900; color: #f0c040; letter-spacing: -1px; }
+.logo-sub { color: #6b7899; font-size: 14px; margin-top: 4px; }
+.inp { width: 100%; padding: 14px 16px; background: #0f1117; border: 1.5px solid #2a3347; border-radius: 12px; color: #f0f0f0; font-size: 16px; margin-bottom: 14px; font-family: Heebo, sans-serif; outline: none; transition: border 0.2s; text-align: right; }
+.inp:focus { border-color: #f0c040; }
+.btn-primary { width: 100%; padding: 15px; background: #f0c040; color: #0f1117; border: none; border-radius: 12px; font-size: 17px; font-weight: 700; font-family: Heebo, sans-serif; cursor: pointer; margin-top: 4px; }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-link { text-align: center; margin-top: 20px; color: #6b7899; font-size: 14px; cursor: pointer; }
+.auth-link span { color: #f0c040; font-weight: 600; }
+.app-layout { display: flex; flex-direction: column; min-height: 100vh; }
+.app-header { background: #161b27; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a3347; position: sticky; top: 0; z-index: 100; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-title { font-size: 20px; font-weight: 900; color: #f0c040; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.balance-pill { background: #f0c040; color: #0f1117; font-weight: 700; padding: 6px 14px; border-radius: 100px; font-size: 15px; }
+.btn-logout { background: transparent; border: 1px solid #2a3347; color: #6b7899; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-family: Heebo, sans-serif; }
+.app-main { flex: 1; padding: 20px 16px 100px; max-width: 600px; margin: 0 auto; width: 100%; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #161b27; border-top: 1px solid #2a3347; display: flex; z-index: 100; }
+.nav-btn { flex: 1; background: transparent; border: none; color: #6b7899; padding: 12px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: Heebo, sans-serif; }
+.nav-btn.active { color: #f0c040; }
+.nav-icon { font-size: 20px; }
+.nav-label { font-size: 11px; }
+.hero-card { background: linear-gradient(135deg, #1e2d50, #162040); border-radius: 20px; padding: 28px 24px; margin-bottom: 24px; text-align: center; border: 1px solid #2a3f6f; }
+.admin-hero { background: linear-gradient(135deg, #2d1e50, #401628); border-color: #6f2a3a; }
+.hero-name { font-size: 18px; color: #a0b0d0; margin-bottom: 8px; }
+.hero-balance { font-size: 48px; font-weight: 900; color: #f0c040; line-height: 1; }
+.hero-sub { font-size: 13px; color: #6b7899; margin-top: 6px; }
+.hero-rank { margin-top: 12px; display: inline-block; background: #f0c04020; color: #f0c040; padding: 4px 16px; border-radius: 100px; font-size: 14px; font-weight: 600; }
+.section-title { font-size: 18px; font-weight: 700; color: #f0f0f0; margin: 20px 0 12px; }
+.empty-msg { color: #6b7899; text-align: center; padding: 24px; }
+.tip-card { background: #161b27; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #2a3347; border-right: 4px solid #2a3347; }
+.tip-card.won { border-right-color: #22c55e; }
+.tip-card.lost { border-right-color: #ef4444; }
+.tip-card.pending { border-right-color: #f0c040; }
+.tip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tip-user { display: flex; align-items: center; gap: 10px; }
+.tip-avatar { width: 34px; height: 34px; border-radius: 50%; background: #2a3347; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; color: #f0c040; }
+.tip-username { font-weight: 600; font-size: 14px; }
+.tip-resume { font-size: 12px; color: #6b7899; }
+.tip-status-badge { font-size: 12px; padding: 4px 10px; border-radius: 100px; font-weight: 600; background: #0f1117; }
+.tip-status-badge.won { color: #22c55e; }
+.tip-status-badge.lost { color: #ef4444; }
+.tip-status-badge.pending { color: #f0c040; }
+.tip-game { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.tip-prediction { font-size: 14px; color: #a0b0d0; margin-bottom: 10px; font-style: italic; }
+.tip-footer { display: flex; justify-content: space-between; font-size: 13px; color: #6b7899; }
+.tip-odds strong { color: #f0c040; }
+.tab-bar { display: flex; background: #161b27; border-radius: 12px; padding: 4px; margin-bottom: 20px; gap: 4px; border: 1px solid #2a3347; }
+.tab-btn { flex: 1; background: transparent; border: none; color: #6b7899; padding: 10px; border-radius: 8px; font-family: Heebo, sans-serif; font-size: 15px; cursor: pointer; }
+.tab-btn.active { background: #f0c040; color: #0f1117; font-weight: 700; }
+.form-card { background: #161b27; border-radius: 20px; padding: 24px; border: 1px solid #2a3347; }
+.form-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+.form-label { display: block; font-size: 13px; color: #6b7899; margin-bottom: 6px; margin-top: 4px; }
+.hint { font-size: 13px; margin-bottom: 16px; margin-top: -8px; }
+.lb-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.lb-title { font-size: 18px; font-weight: 700; }
+.lb-month { color: #6b7899; font-size: 14px; }
+.lb-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #161b27; border-radius: 12px; margin-bottom: 8px; border: 1px solid #2a3347; }
+.lb-row.leader { border-color: #f0c040; background: #1e2a10; }
+.lb-rank { font-size: 20px; width: 36px; text-align: center; }
+.lb-name { flex: 1; font-weight: 600; }
+.lb-balance { font-weight: 700; color: #f0c040; font-size: 16px; }
+.winners-history { margin-top: 24px; }
+.winners-history h3 { font-size: 16px; color: #6b7899; margin-bottom: 12px; }
+.winner-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a3347; font-size: 14px; color: #a0b0d0; }
+.profile-card { text-align: center; background: #161b27; border-radius: 20px; padding: 28px; margin-bottom: 20px; border: 1px solid #2a3347; }
+.profile-avatar { width: 64px; height: 64px; border-radius: 50%; background: #f0c040; color: #0f1117; font-size: 28px; font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+.profile-name { font-size: 22px; font-weight: 700; }
+.profile-email { color: #6b7899; font-size: 14px; margin-bottom: 16px; direction: ltr; }
+.profile-balance { font-size: 40px; font-weight: 900; color: #f0c040; }
+.profile-balance-label { font-size: 13px; color: #6b7899; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.stat-box { background: #161b27; border-radius: 14px; padding: 16px; text-align: center; border: 1px solid #2a3347; }
+.stat-num { font-size: 28px; font-weight: 900; }
+.stat-num.green { color: #22c55e; }
+.stat-num.red { color: #ef4444; }
+.stat-num.yellow { color: #f0c040; }
+.stat-num.blue { color: #60a5fa; }
+.stat-label { font-size: 13px; color: #6b7899; margin-top: 4px; }
+.admin-actions { margin-bottom: 20px; }
+.btn-danger { width: 100%; padding: 14px; background: #7f1d1d; border: none; color: #fca5a5; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: Heebo, sans-serif; }
+.admin-tip-card { background: #161b27; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #f0c04050; }
+.admin-tip-user { font-weight: 700; font-size: 16px; margin-bottom: 4px; color: #f0c040; }
+.admin-tip-game { font-size: 15px; margin-bottom: 2px; }
+.admin-tip-pred { font-size: 13px; color: #a0b0d0; margin-bottom: 4px; }
+.admin-tip-time { font-size: 12px; color: #6b7899; margin-bottom: 12px; direction: ltr; text-align: right; }
+.admin-tip-btns { display: flex; gap: 8px; }
+.btn-won { flex: 1; padding: 10px; background: #14532d; color: #4ade80; border: none; border-radius: 10px; font-family: Heebo, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
+.btn-lost { flex: 1; padding: 10px; background: #7f1d1d; color: #fca5a5; border: none; border-radius: 10px; font-family: Heebo, sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; }
+.fab { position: fixed; bottom: 80px; left: 20px; background: #f0c040; color: #0f1117; border: none; border-radius: 100px; padding: 14px 22px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: Heebo, sans-serif; box-shadow: 0 4px 20px rgba(240,192,64,0.4); z-index: 99; }
+.rules-box { background: #1e2a10; border: 1px solid #f0c04050; border-radius: 12px; padding: 12px 16px; font-size: 13px; color: #c0b060; margin-bottom: 16px; line-height: 1.6; }
+.balance-info-box { display:flex; justify-content:space-between; align-items:center; background:#161b27; border:1px solid #2a3347; border-radius:12px; padding:12px 16px; margin-bottom:8px; }
+.balance-info-num { font-size:20px; font-weight:900; color:#f0c040; }
+.potential-win { display:flex; justify-content:space-between; align-items:center; background:#14532d; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:14px; }
+.potential-num { font-size:18px; font-weight:700; color:#4ade80; }
+.bet-amounts { display:flex; justify-content:space-between; font-size:13px; color:#6b7899; margin-top:8px; padding-top:8px; border-top:1px solid #2a3347; }
+.pending-banner { background:#7f1d1d; border-radius:12px; padding:12px 16px; font-size:14px; color:#fca5a5; margin-bottom:16px; text-align:center; font-weight:600; }
+.admin-reasoning { font-size:12px; color:#8090b0; background:#0f1117; border-radius:8px; padding:8px 10px; margin-bottom:8px; border-right:3px solid #2a3347; }
+.admin-bet-amounts { display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; }
+.hint-ok { color: #22c55e; font-size: 13px; margin-bottom: 12px; margin-top: -8px; }
+.hint-err { color: #ef4444; font-size: 13px; margin-bottom: 12px; margin-top: -8px; }
+.tip-reasoning { font-size: 13px; color: #8090b0; margin-bottom: 8px; line-height: 1.5; background: #0f1117; border-radius: 8px; padding: 8px 12px; border-right: 3px solid #2a3347; }
+.tip-submitted { font-size: 11px; color: #4a5568; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div id="root"><div class="loading-screen"><span style="font-size:48px">⚽</span><p>טוען...</p></div></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+const { createClient } = supabase;
+
+const SUPABASE_URL = "https://qxalngntihymomoqcgpq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4YWxuZ250aWh5bW9tb3FjZ3BxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2OTI0OTMsImV4cCI6MjA5MDI2ODQ5M30.mtP0I1F7VNufRJCXcY0s18s_kXMGGhmYGwD4-s8ISUk";
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function today() { return new Date().toISOString().slice(0, 10); }
+function currentMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
+function fmt(n) { return `₪${Number(n||0).toFixed(0)}`; }
+function hoursUntil(t) { return (new Date(t) - new Date()) / 3600000; }
+
+function App() {
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [screen, setScreen] = useState("login");
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3500); };
+
+  useEffect(() => {
+    sb.auth.getSession().then(({data:{session}}) => {
+      setSession(session);
+      if (session) loadProfile(session.user.id);
+      else setLoading(false);
+    });
+    const {data:{subscription}} = sb.auth.onAuthStateChange((_,session) => {
+      setSession(session);
+      if (session) loadProfile(session.user.id);
+      else { setProfile(null); setLoading(false); setScreen("login"); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadProfile = async (uid) => {
+    const {data} = await sb.from("profiles").select("*").eq("id",uid).single();
+    if (data) {
+      const todayStr = today();
+      if (!data.is_admin && data.last_login_date !== todayStr) {
+        let updates = {last_login_date: todayStr};
+        if (data.pending_no_payout) { updates.pending_no_payout=false; showToast("❌ ההמלצה האחרונה נפלה — לא קיבלת תקציב יומי!"); }
+        else { updates.balance=(data.balance||0)+50; showToast("✅ קיבלת תקציב יומי של ₪50!"); }
+        await sb.from("profiles").update(updates).eq("id",uid);
+        const {data:fresh} = await sb.from("profiles").select("*").eq("id",uid).single();
+        setProfile(fresh);
+      } else { setProfile(data); }
+      setScreen("home");
+    } else { setLoading(false); }
+    setLoading(false);
+  };
+
+  const refreshProfile = async () => {
+    if (!session) return;
+    const {data} = await sb.from("profiles").select("*").eq("id",session.user.id).single();
+    if (data) setProfile(data);
+  };
+
+  if (loading) return <div className="loading-screen"><span style={{fontSize:48}}>⚽</span><p>טוען...</p></div>;
+
+  return (
+    <div>
+      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+      {!session
+        ? screen==="login"
+          ? <LoginScreen onGoRegister={()=>setScreen("register")} showToast={showToast}/>
+          : <RegisterScreen onGoLogin={()=>setScreen("login")} showToast={showToast}/>
+        : <AuthApp session={session} profile={profile} screen={screen} setScreen={setScreen}
+            onLogout={async()=>{await sb.auth.signOut();}} showToast={showToast} refreshProfile={refreshProfile}/>
+      }
+    </div>
+  );
+}
+
+function LoginScreen({onGoRegister, showToast}) {
+  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [loading,setLoading]=useState(false);
+  const login = async () => {
+    if (!email||!password) return showToast("יש למלא מייל וסיסמה","error");
+    setLoading(true);
+    const {error} = await sb.auth.signInWithPassword({email,password});
+    if (error) showToast("מייל או סיסמה שגויים","error");
+    setLoading(false);
+  };
+  return (
+    <div className="auth-wrap"><div className="auth-card">
+      <div className="logo-block"><span className="logo-icon">⚽</span><h1 className="logo-title">TipZone</h1><p className="logo-sub">אליפות ההמלצות</p></div>
+      <input className="inp" placeholder="מייל" value={email} onChange={e=>setEmail(e.target.value)} type="email" dir="ltr"/>
+      <input className="inp" placeholder="סיסמה" value={password} onChange={e=>setPassword(e.target.value)} type="password" dir="ltr" onKeyDown={e=>e.key==="Enter"&&login()}/>
+      <button className="btn-primary" onClick={login} disabled={loading}>{loading?"מתחבר...":"התחבר"}</button>
+      <p className="auth-link" onClick={onGoRegister}>אין לך חשבון? <span>הרשם עכשיו</span></p>
+    </div></div>
+  );
+}
+
+function RegisterScreen({onGoLogin, showToast}) {
+  const [name,setName]=useState(""); const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [loading,setLoading]=useState(false);
+  const register = async () => {
+    if (!name||!email||!password) return showToast("יש למלא את כל השדות","error");
+    if (password.length<6) return showToast("סיסמה חייבת להיות לפחות 6 תווים","error");
+    setLoading(true);
+    const {error} = await sb.auth.signUp({email,password,options:{data:{name}}});
+    if (error) showToast(error.message,"error");
+    else { showToast("נרשמת! כעת התחבר 🎉"); onGoLogin(); }
+    setLoading(false);
+  };
+  return (
+    <div className="auth-wrap"><div className="auth-card">
+      <div className="logo-block"><span className="logo-icon">⚽</span><h1 className="logo-title">TipZone</h1><p className="logo-sub">הצטרף לאליפות</p></div>
+      <input className="inp" placeholder="שם מלא" value={name} onChange={e=>setName(e.target.value)}/>
+      <input className="inp" placeholder="מייל" value={email} onChange={e=>setEmail(e.target.value)} type="email" dir="ltr"/>
+      <input className="inp" placeholder="סיסמה (לפחות 6 תווים)" value={password} onChange={e=>setPassword(e.target.value)} type="password" dir="ltr"/>
+      <button className="btn-primary" onClick={register} disabled={loading}>{loading?"נרשם...":"הרשם"}</button>
+      <p className="auth-link" onClick={onGoLogin}>כבר יש לך חשבון? <span>התחבר</span></p>
+    </div></div>
+  );
+}
+
+function AuthApp({session,profile,screen,setScreen,onLogout,showToast,refreshProfile}) {
+  if (!profile) return <div className="loading-screen"><span style={{fontSize:48}}>⚽</span><p>טוען...</p></div>;
+  const nav = profile.is_admin
+    ? [{id:"home",l:"בית",i:"🏠"},{id:"tips",l:"המלצות",i:"💡"},{id:"bets",l:"טפסים",i:"🎯"},{id:"leaderboard",l:"טבלאות",i:"🏆"},{id:"admin",l:"ניהול",i:"⚙️"}]
+    : [{id:"home",l:"בית",i:"🏠"},{id:"tips",l:"המלצות",i:"💡"},{id:"bets",l:"טפסים",i:"🎯"},{id:"leaderboard",l:"טבלאות",i:"🏆"},{id:"profile",l:"פרופיל",i:"👤"}];
+  return (
+    <div className="app-layout">
+      <header className="app-header">
+        <div className="header-left"><span style={{fontSize:24}}>⚽</span><span className="header-title">TipZone</span></div>
+        <div className="header-right">
+          {!profile.is_admin && <div className="balance-pill">{fmt(profile.balance)}</div>}
+          <button className="btn-logout" onClick={onLogout}>יציאה</button>
+        </div>
+      </header>
+      <main className="app-main">
+        {screen==="home" && <HomeScreen profile={profile} setScreen={setScreen}/>}
+        {screen==="tips" && <TipsScreen session={session} profile={profile} showToast={showToast}/>}
+        {screen==="bets" && <BetsScreen session={session} profile={profile} showToast={showToast} refreshProfile={refreshProfile}/>}
+        {screen==="leaderboard" && <LeaderboardScreen/>}
+        {screen==="admin" && profile.is_admin && <AdminScreen showToast={showToast}/>}
+        {screen==="profile" && <ProfileScreen session={session} profile={profile}/>}
+      </main>
+      <nav className="bottom-nav">
+        {nav.map(item=>(
+          <button key={item.id} className={`nav-btn ${screen===item.id?"active":""}`} onClick={()=>setScreen(item.id)}>
+            <span className="nav-icon">{item.i}</span><span className="nav-label">{item.l}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function HomeScreen({profile,setScreen}) {
+  const [tips,setTips]=useState([]); const [myRank,setMyRank]=useState(null);
+  useEffect(()=>{
+    sb.from("tips").select("*,profiles(name)").order("created_at",{ascending:false}).limit(5).then(({data})=>setTips(data||[]));
+    sb.from("profiles").select("*").eq("is_admin",false).order("balance",{ascending:false}).then(({data})=>{
+      if (data) setMyRank(data.findIndex(p=>p.id===profile.id)+1);
+    });
+  },[]);
+  return (
+    <div>
+      {!profile.is_admin
+        ? <div className="hero-card"><div className="hero-name">שלום, {profile.name} 👋</div><div className="hero-balance">{fmt(profile.balance)}</div><div className="hero-sub">יתרה נוכחית</div>{myRank>0&&<div className="hero-rank">מקום #{myRank} בחודש</div>}</div>
+        : <div className="hero-card admin-hero"><div className="hero-name">ברוך הבא, מנהל ⚙️</div><div className="hero-sub">ניהול טיפים ואישור תוצאות</div></div>
+      }
+      <h2 className="section-title">טיפים אחרונים</h2>
+      {tips.length===0&&<p className="empty-msg">אין טיפים עדיין</p>}
+      {tips.map(t=><TipCard key={t.id} tip={t}/>)}
+      {!profile.is_admin&&<button className="fab" onClick={()=>setScreen("tips")}>+ טיפ חדש</button>}
+    </div>
+  );
+}
+
+function TipsScreen({session,profile,showToast}) {
+  const [tab,setTab]=useState("feed"); const [tips,setTips]=useState([]);
+  const [game,setGame]=useState(""); const [odds,setOdds]=useState(""); const [gameTime,setGameTime]=useState("");
+  const [prediction,setPrediction]=useState(""); const [reasoning,setReasoning]=useState(""); const [sub,setSub]=useState(false);
+  const load = async () => { const {data}=await sb.from("tips").select("*,profiles(name)").order("created_at",{ascending:false}); setTips(data||[]); };
+  useEffect(()=>{load();},[]);
+  const getTimeStatus = () => {
+    if (!gameTime) return null;
+    const h = hoursUntil(gameTime);
+    if (h < 0) return {ok:false, msg:"❌ המשחק כבר התחיל — לא ניתן להעלות המלצה"};
+    if (h < 6) return {ok:false, msg:`❌ נותרו רק ${Math.floor(h*60)} דקות — חייב לפחות 6 שעות לפני`};
+    return {ok:true, msg:`✅ ${Math.floor(h)} שעות ו-${Math.floor((h%1)*60)} דקות עד המשחק`};
+  };
+  const submit = async () => {
+    if (!game||!odds||!gameTime||!prediction||!reasoning) return showToast("יש למלא את כל השדות כולל הנימוק","error");
+    if (isNaN(parseFloat(odds))||parseFloat(odds)<1) return showToast("יחס חייב להיות מספר גדול מ-1","error");
+    const h = hoursUntil(gameTime);
+    if (h < 0) return showToast("המשחק כבר התחיל! לא ניתן להעלות המלצה","error");
+    if (h < 6) return showToast("חייב לפחות 6 שעות לפני המשחק!","error");
+    setSub(true);
+    // Check 1 tip per day
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const {data:todayTips} = await sb.from("tips").select("id").eq("user_id",session.user.id).gte("submitted_at",todayStart.toISOString());
+    if (todayTips && todayTips.length > 0) return showToast("כבר העלית המלצה היום! ניתן להעלות המלצה אחת ביום בלבד","error");
+    const {error}=await sb.from("tips").insert({user_id:session.user.id,game,prediction,reasoning,odds:parseFloat(odds),game_time:new Date(gameTime).toISOString(),submitted_at:new Date().toISOString(),status:"pending",month:currentMonth()});
+    if (error) showToast("שגיאה: "+error.message,"error");
+    else { showToast("ההמלצה הועלתה! 🎉"); setGame("");setOdds("");setGameTime("");setPrediction("");setReasoning(""); setTab("feed"); load(); }
+    setSub(false);
+  };
+  const timeStatus = getTimeStatus();
+  return (
+    <div>
+      <div className="tab-bar">
+        <button className={`tab-btn ${tab==="feed"?"active":""}`} onClick={()=>{setTab("feed");load();}}>פיד טיפים</button>
+        {!profile.is_admin&&<button className={`tab-btn ${tab==="new"?"active":""}`} onClick={()=>setTab("new")}>+ טיפ חדש</button>}
+      </div>
+      {tab==="feed"&&<div>{tips.length===0&&<p className="empty-msg">אין טיפים עדיין</p>}{tips.map(t=><TipCard key={t.id} tip={t}/>)}</div>}
+      {tab==="new"&&<div className="form-card">
+        <h2 className="form-title">העלאת טיפ חדש</h2>
+        <div className="rules-box">⚠️ ההמלצה חייבת להיות מועלית <strong>לפחות 6 שעות לפני תחילת המשחק</strong>. לא ניתן להעלות לאחר שהמשחק החל.</div>
+        <label className="form-label">שם המשחק</label>
+        <input className="inp" placeholder="לדוגמה: ברצלונה - ריאל מדריד" value={game} onChange={e=>setGame(e.target.value)}/>
+        <label className="form-label">תאריך ושעת המשחק</label>
+        <input className="inp" type="datetime-local" value={gameTime} onChange={e=>setGameTime(e.target.value)} dir="ltr"/>
+        {timeStatus&&<p className={`hint ${timeStatus.ok?"hint-ok":"hint-err"}`}>{timeStatus.msg}</p>}
+        <label className="form-label">המלצה / סימון</label>
+        <input className="inp" placeholder="לדוגמה: ניצחון ברצלונה / 1X / Over 2.5" value={prediction} onChange={e=>setPrediction(e.target.value)}/>
+        <label className="form-label">יחס (אודס) מאתר Winner</label>
+        <input className="inp" placeholder="לדוגמה: 2.50" value={odds} onChange={e=>setOdds(e.target.value)} type="number" step="0.01" dir="ltr"/>
+        <label className="form-label">נימוק — למה אתה ממליץ? 📊</label>
+        <textarea className="inp" rows="4" placeholder="פרט את הניתוח שלך: מצב הקבוצות, פצועים, סטטיסטיקות, ביצועים אחרונים..." value={reasoning} onChange={e=>setReasoning(e.target.value)} style={{resize:"vertical"}}/>
+        <button className="btn-primary" onClick={submit} disabled={sub||!timeStatus?.ok}>{sub?"שומר...":"העלה טיפ"}</button>
+      </div>}
+    </div>
+  );
+}
+
+function TipCard({tip}) {
+  const [resume,setResume]=useState({wins:0,losses:0});
+  const name=tip.profiles?.name||"?";
+  useEffect(()=>{
+    sb.from("tips").select("status").eq("user_id",tip.user_id).then(({data})=>{
+      if(data) setResume({wins:data.filter(t=>t.status==="won").length,losses:data.filter(t=>t.status==="lost").length});
+    });
+  },[tip.user_id]);
+  const icon=tip.status==="won"?"✅":tip.status==="lost"?"❌":"⏳";
+  const label=tip.status==="won"?"תפס":tip.status==="lost"?"נפל":"ממתין";
+  const submittedAt = tip.submitted_at ? new Date(tip.submitted_at).toLocaleString("he-IL",{dateStyle:"short",timeStyle:"short"}) : null;
+  return (
+    <div className={`tip-card ${tip.status}`}>
+      <div className="tip-header">
+        <div className="tip-user"><span className="tip-avatar">{name[0]}</span><div><span className="tip-username">{name}</span><span className="tip-resume"> · {resume.wins}✅ {resume.losses}❌</span></div></div>
+        <span className={`tip-status-badge ${tip.status}`}>{icon} {label}</span>
+      </div>
+      <div className="tip-game">{tip.game}</div>
+      <div className="tip-prediction">"{tip.prediction}"</div>
+      {tip.reasoning && <div className="tip-reasoning">📊 {tip.reasoning}</div>}
+      <div className="tip-footer"><span className="tip-odds">יחס: <strong>{tip.odds}</strong></span><span className="tip-time">🏟 {new Date(tip.game_time||tip.gameTime).toLocaleString("he-IL",{dateStyle:"short",timeStyle:"short"})}</span></div>
+      {submittedAt && <div className="tip-submitted">⏱ הועלה: {submittedAt}</div>}
+    </div>
+  );
+}
+
+function LeaderboardScreen() {
+  const [tab,setTab]=useState("monthly"); const [monthly,setMonthly]=useState([]); const [champs,setChamps]=useState([]); const [winners,setWinners]=useState([]);
+  useEffect(()=>{
+    sb.from("profiles").select("*").eq("is_admin",false).order("balance",{ascending:false}).then(({data})=>setMonthly(data||[]));
+    sb.from("profiles").select("*").eq("is_admin",false).order("championships",{ascending:false}).then(({data})=>setChamps(data||[]));
+    sb.from("monthly_winners").select("*").order("created_at",{ascending:false}).then(({data})=>setWinners(data||[]));
+  },[]);
+  const medals=["🥇","🥈","🥉"];
+  return (
+    <div>
+      <div className="tab-bar">
+        <button className={`tab-btn ${tab==="monthly"?"active":""}`} onClick={()=>setTab("monthly")}>חודש נוכחי</button>
+        <button className={`tab-btn ${tab==="champions"?"active":""}`} onClick={()=>setTab("champions")}>אליפויות</button>
+      </div>
+      {tab==="monthly"&&<div>
+        <div className="lb-header"><span className="lb-title">🏆 טבלה חודשית</span><span className="lb-month">{currentMonth().replace("-","/")}</span></div>
+        {monthly.length===0&&<p className="empty-msg">אין שחקנים עדיין</p>}
+        {monthly.map((u,i)=><div key={u.id} className={`lb-row ${i===0?"leader":""}`}><span className="lb-rank">{medals[i]||`#${i+1}`}</span><span className="lb-name">{u.name}</span><span className="lb-balance">{fmt(u.balance)}</span></div>)}
+      </div>}
+      {tab==="champions"&&<div>
+        <div className="lb-header"><span className="lb-title">🏅 טבלת אליפויות</span></div>
+        {champs.length===0&&<p className="empty-msg">אין אליפויות עדיין</p>}
+        {champs.map((u,i)=><div key={u.id} className={`lb-row ${i===0?"leader":""}`}><span className="lb-rank">{medals[i]||`#${i+1}`}</span><span className="lb-name">{u.name}</span><span className="lb-balance">🏆 {u.championships}</span></div>)}
+        {winners.length>0&&<div className="winners-history"><h3>היסטוריית מנצחים</h3>{winners.map((w,i)=><div key={i} className="winner-row"><span>{w.month}</span><span>🥇 {w.user_name}</span><span>{fmt(w.balance)}</span></div>)}</div>}
+      </div>}
+    </div>
+  );
+}
+
+function ProfileScreen({session,profile}) {
+  const [tips,setTips]=useState([]);
+  useEffect(()=>{ sb.from("tips").select("*,profiles(name)").eq("user_id",session.user.id).order("created_at",{ascending:false}).then(({data})=>setTips(data||[])); },[]);
+  const wins=tips.filter(t=>t.status==="won").length; const losses=tips.filter(t=>t.status==="lost").length;
+  const pending=tips.filter(t=>t.status==="pending").length; const rate=wins+losses>0?Math.round(wins/(wins+losses)*100):0;
+  return (
+    <div>
+      <div className="profile-card">
+        <div className="profile-avatar">{profile.name[0]}</div>
+        <div className="profile-name">{profile.name}</div>
+        <div className="profile-email">{session.user.email}</div>
+        <div className="profile-balance">{fmt(profile.balance)}</div>
+        <div className="profile-balance-label">יתרה</div>
+      </div>
+      <div className="stats-grid">
+        <div className="stat-box"><div className="stat-num green">{wins}</div><div className="stat-label">תפיסות ✅</div></div>
+        <div className="stat-box"><div className="stat-num red">{losses}</div><div className="stat-label">נפילות ❌</div></div>
+        <div className="stat-box"><div className="stat-num yellow">{pending}</div><div className="stat-label">ממתינים ⏳</div></div>
+        <div className="stat-box"><div className="stat-num blue">{rate}%</div><div className="stat-label">אחוז הצלחה</div></div>
+      </div>
+      <h2 className="section-title">הטיפים שלי</h2>
+      {tips.length===0&&<p className="empty-msg">לא העלית טיפים עדיין</p>}
+      {tips.map(t=><TipCard key={t.id} tip={t}/>)}
+    </div>
+  );
+}
+
+function BetsScreen({session,profile,showToast,refreshProfile}) {
+  const [tab,setTab]=useState("feed"); const [bets,setBets]=useState([]);
+  const [game,setGame]=useState(""); const [odds,setOdds]=useState("");
+  const [gameTime,setGameTime]=useState(""); const [prediction,setPrediction]=useState("");
+  const [amount,setAmount]=useState(""); const [sub,setSub]=useState(false);
+
+  const load = async () => {
+    const {data}=await sb.from("bets").select("*,profiles(name)").order("created_at",{ascending:false});
+    setBets(data||[]);
+  };
+  useEffect(()=>{load();},[]);
+
+  const getTimeStatus = () => {
+    if (!gameTime) return null;
+    const mins = (new Date(gameTime) - new Date()) / 60000;
+    if (mins < 0) return {ok:false, msg:"❌ המשחק כבר התחיל"};
+    if (mins < 5) return {ok:false, msg:`❌ נותרו רק ${Math.floor(mins)} דקות — חייב לפחות 5 דקות לפני`};
+    if (mins < 360) return {ok:true, msg:`✅ ${Math.floor(mins)} דקות עד המשחק`};
+    const h = Math.floor(mins/60); return {ok:true, msg:`✅ ${h} שעות עד המשחק`};
+  };
+
+  const submit = async () => {
+    if (!game||!odds||!gameTime||!prediction||!amount) return showToast("יש למלא את כל השדות","error");
+    const amt = parseFloat(amount);
+    if (isNaN(amt)||amt<=0) return showToast("סכום לא תקין","error");
+    if (amt > (profile.balance||0)) return showToast(`אין מספיק תקציב! יש לך ${fmt(profile.balance)} בלבד`,"error");
+    if (isNaN(parseFloat(odds))||parseFloat(odds)<1) return showToast("יחס חייב להיות מספר גדול מ-1","error");
+    const mins = (new Date(gameTime) - new Date()) / 60000;
+    if (mins < 5) return showToast("חייב לפחות 5 דקות לפני המשחק!","error");
+    setSub(true);
+    // Deduct from balance
+    const newBalance = (profile.balance||0) - amt;
+    await sb.from("profiles").update({balance:newBalance}).eq("id",session.user.id);
+    const {error}=await sb.from("bets").insert({
+      user_id:session.user.id, game, prediction, odds:parseFloat(odds),
+      game_time:new Date(gameTime).toISOString(), amount:amt,
+      potential_win:Math.round(amt*parseFloat(odds)*100)/100,
+      status:"pending", month:currentMonth(), created_at:new Date().toISOString()
+    });
+    if (error) {
+      // Refund on error
+      await sb.from("profiles").update({balance:profile.balance}).eq("id",session.user.id);
+      showToast("שגיאה: "+error.message,"error");
+    } else {
+      showToast(`✅ הטופס נשלח! ירד לך ₪${amt} מהתקציב`);
+      setGame("");setOdds("");setGameTime("");setPrediction("");setAmount("");
+      setTab("feed"); load(); refreshProfile();
+    }
+    setSub(false);
+  };
+
+  const timeStatus = getTimeStatus();
+  const myBets = bets.filter(b=>b.user_id===session.user.id);
+
+  return (
+    <div>
+      <div className="tab-bar">
+        <button className={`tab-btn ${tab==="feed"?"active":""}`} onClick={()=>{setTab("feed");load();}}>הטפסים שלי</button>
+        {!profile.is_admin&&<button className={`tab-btn ${tab==="new"?"active":""}`} onClick={()=>setTab("new")}>+ טופס חדש</button>}
+      </div>
+      {tab==="feed"&&<div>
+        <div className="balance-info-box">
+          <span>יתרה זמינה:</span><span className="balance-info-num">{fmt(profile.balance)}</span>
+        </div>
+        {myBets.length===0&&<p className="empty-msg">לא שלחת טפסים עדיין</p>}
+        {myBets.map(b=><BetCard key={b.id} bet={b}/>)}
+      </div>}
+      {tab==="new"&&<div className="form-card">
+        <h2 className="form-title">שליחת טופס חדש 🎯</h2>
+        <div className="rules-box">⚠️ ניתן לשלוח טופס עד <strong>5 דקות לפני תחילת המשחק</strong>. הסכום יורד מיד מהתקציב שלך.</div>
+        <div className="balance-info-box" style={{marginBottom:16}}>
+          <span>יתרה זמינה:</span><span className="balance-info-num">{fmt(profile.balance)}</span>
+        </div>
+        <label className="form-label">שם המשחק</label>
+        <input className="inp" placeholder="לדוגמה: ברצלונה - ריאל מדריד" value={game} onChange={e=>setGame(e.target.value)}/>
+        <label className="form-label">תאריך ושעת המשחק</label>
+        <input className="inp" type="datetime-local" value={gameTime} onChange={e=>setGameTime(e.target.value)} dir="ltr"/>
+        {timeStatus&&<p className={`hint ${timeStatus.ok?"hint-ok":"hint-err"}`}>{timeStatus.msg}</p>}
+        <label className="form-label">הימור / סימון</label>
+        <input className="inp" placeholder="לדוגמה: ניצחון ברצלונה / 1X / Over 2.5" value={prediction} onChange={e=>setPrediction(e.target.value)}/>
+        <label className="form-label">יחס (אודס) מאתר Winner</label>
+        <input className="inp" placeholder="לדוגמה: 2.40" value={odds} onChange={e=>setOdds(e.target.value)} type="number" step="0.01" dir="ltr"/>
+        <label className="form-label">כמה ₪ אתה מסכן?</label>
+        <input className="inp" placeholder={`מקסימום ${fmt(profile.balance)}`} value={amount} onChange={e=>setAmount(e.target.value)} type="number" step="1" dir="ltr"/>
+        {amount&&odds&&!isNaN(parseFloat(amount))&&!isNaN(parseFloat(odds))&&parseFloat(odds)>=1&&(
+          <div className="potential-win">
+            <span>אם תפס:</span>
+            <span className="potential-num">+{fmt(parseFloat(amount)*parseFloat(odds)-parseFloat(amount))} ₪ רווח</span>
+          </div>
+        )}
+        <button className="btn-primary" onClick={submit} disabled={sub||!timeStatus?.ok||!amount||parseFloat(amount)>(profile.balance||0)}>{sub?"שולח...":"שלח טופס"}</button>
+      </div>}
+    </div>
+  );
+}
+
+function BetCard({bet}) {
+  const icon=bet.status==="won"?"✅":bet.status==="lost"?"❌":"⏳";
+  const label=bet.status==="won"?"תפס":bet.status==="lost"?"נפל":"ממתין";
+  return (
+    <div className={`tip-card ${bet.status}`}>
+      <div className="tip-header">
+        <div className="tip-game">{bet.game}</div>
+        <span className={`tip-status-badge ${bet.status}`}>{icon} {label}</span>
+      </div>
+      <div className="tip-prediction">"{bet.prediction}"</div>
+      <div className="tip-footer">
+        <span className="tip-odds">יחס: <strong>{bet.odds}</strong></span>
+        <span className="tip-time">🏟 {new Date(bet.game_time).toLocaleString("he-IL",{dateStyle:"short",timeStyle:"short"})}</span>
+      </div>
+      <div className="bet-amounts">
+        <span>הסכנת: <strong style={{color:"#ef4444"}}>{fmt(bet.amount)}</strong></span>
+        <span>פוטנציאל: <strong style={{color:"#22c55e"}}>{fmt(bet.potential_win)}</strong></span>
+      </div>
+    </div>
+  );
+}
+
+function AdminScreen({showToast}) {
+  const [adminTab,setAdminTab]=useState("tips");
+  const [pendingTips,setPendingTips]=useState([]); const [allTips,setAllTips]=useState([]);
+  const [pendingBets,setPendingBets]=useState([]); const [allBets,setAllBets]=useState([]);
+
+  const loadTips = async () => {
+    const {data}=await sb.from("tips").select("*,profiles(name)").order("created_at",{ascending:false});
+    if(data){setAllTips(data);setPendingTips(data.filter(t=>t.status==="pending"&&hoursUntil(t.game_time)<=0));}
+  };
+  const loadBets = async () => {
+    const {data}=await sb.from("bets").select("*,profiles(name)").order("created_at",{ascending:false});
+    if(data){setAllBets(data);setPendingBets(data.filter(b=>b.status==="pending"&&hoursUntil(b.game_time)<=0));}
+  };
+  useEffect(()=>{loadTips();loadBets();},[]);
+
+  const decideTip = async (tip,result) => {
+    await sb.from("tips").update({status:result}).eq("id",tip.id);
+    if(result==="won"){
+      const prize=Math.round(100*tip.odds);
+      const {data:p}=await sb.from("profiles").select("balance").eq("id",tip.user_id).single();
+      await sb.from("profiles").update({balance:(p?.balance||0)+prize,pending_no_payout:false}).eq("id",tip.user_id);
+      showToast(`✅ ${tip.profiles?.name} קיבל ₪${prize} על ההמלצה!`);
+    } else {
+      await sb.from("profiles").update({pending_no_payout:true}).eq("id",tip.user_id);
+      showToast(`❌ המלצת ${tip.profiles?.name} נפלה`);
+    }
+    loadTips();
+  };
+
+  const decideBet = async (bet,result) => {
+    await sb.from("bets").update({status:result}).eq("id",bet.id);
+    if(result==="won"){
+      const {data:p}=await sb.from("profiles").select("balance").eq("id",bet.user_id).single();
+      const winnings = Math.round(bet.potential_win*100)/100;
+      await sb.from("profiles").update({balance:(p?.balance||0)+winnings}).eq("id",bet.user_id);
+      showToast(`✅ ${bet.profiles?.name} זכה ב-₪${winnings} על הטופס!`);
+    } else {
+      showToast(`❌ הטופס של ${bet.profiles?.name} נפל — הכסף כבר נוכה`);
+    }
+    loadBets();
+  };
+
+  const closeMonth = async () => {
+    const {data:players}=await sb.from("profiles").select("*").eq("is_admin",false).order("balance",{ascending:false});
+    if(!players||players.length===0) return showToast("אין שחקנים","error");
+    const w=players[0]; const month=currentMonth();
+    await sb.from("monthly_winners").insert({month,user_id:w.id,user_name:w.name,balance:w.balance});
+    await sb.from("profiles").update({championships:w.championships+1,balance:0}).eq("id",w.id);
+    for(const p of players.filter(p=>p.id!==w.id)) await sb.from("profiles").update({balance:0}).eq("id",p.id);
+    showToast(`🏆 ${w.name} זכה באליפות החודש!`);
+  };
+
+  const totalPending = pendingTips.length + pendingBets.length;
+
+  return (
+    <div>
+      <div className="admin-actions"><button className="btn-danger" onClick={closeMonth}>סגור חודש + הכרז מנצח 🏆</button></div>
+      {totalPending>0&&<div className="pending-banner">⚠️ יש {totalPending} פריטים ממתינים לאישור</div>}
+
+      <div className="tab-bar">
+        <button className={`tab-btn ${adminTab==="tips"?"active":""}`} onClick={()=>setAdminTab("tips")}>💡 המלצות {pendingTips.length>0&&`(${pendingTips.length})`}</button>
+        <button className={`tab-btn ${adminTab==="bets"?"active":""}`} onClick={()=>setAdminTab("bets")}>🎯 טפסים {pendingBets.length>0&&`(${pendingBets.length})`}</button>
+      </div>
+
+      {adminTab==="tips"&&<div>
+        <h2 className="section-title">ממתינות לאישור ({pendingTips.length})</h2>
+        {pendingTips.length===0&&<p className="empty-msg">אין המלצות ממתינות</p>}
+        {pendingTips.map(tip=>(
+          <div key={tip.id} className="admin-tip-card">
+            <div className="admin-tip-user">{tip.profiles?.name}</div>
+            <div className="admin-tip-game">{tip.game}</div>
+            <div className="admin-tip-pred">"{tip.prediction}" — יחס {tip.odds}</div>
+            {tip.reasoning&&<div className="admin-reasoning">📊 {tip.reasoning}</div>}
+            <div className="admin-tip-time">🏟 {new Date(tip.game_time).toLocaleString("he-IL")} | ⏱ הועלה: {tip.submitted_at?new Date(tip.submitted_at).toLocaleString("he-IL"):"-"}</div>
+            <div className="admin-tip-btns">
+              <button className="btn-won" onClick={()=>decideTip(tip,"won")}>✅ תפס (+₪{Math.round(100*tip.odds)})</button>
+              <button className="btn-lost" onClick={()=>decideTip(tip,"lost")}>❌ נפל</button>
+            </div>
+          </div>
+        ))}
+        <h2 className="section-title">כל ההמלצות</h2>
+        {allTips.map(t=><TipCard key={t.id} tip={t}/>)}
+      </div>}
+
+      {adminTab==="bets"&&<div>
+        <h2 className="section-title">טפסים ממתינים לאישור ({pendingBets.length})</h2>
+        {pendingBets.length===0&&<p className="empty-msg">אין טפסים ממתינים</p>}
+        {pendingBets.map(bet=>(
+          <div key={bet.id} className="admin-tip-card">
+            <div className="admin-tip-user">{bet.profiles?.name}</div>
+            <div className="admin-tip-game">{bet.game}</div>
+            <div className="admin-tip-pred">"{bet.prediction}" — יחס {bet.odds}</div>
+            <div className="admin-bet-amounts">
+              <span>סיכון: <strong style={{color:"#ef4444"}}>₪{bet.amount}</strong></span>
+              <span>פוטנציאל: <strong style={{color:"#22c55e"}}>₪{bet.potential_win}</strong></span>
+            </div>
+            <div className="admin-tip-time">🏟 {new Date(bet.game_time).toLocaleString("he-IL")}</div>
+            <div className="admin-tip-btns">
+              <button className="btn-won" onClick={()=>decideBet(bet,"won")}>✅ תפס (+₪{bet.potential_win})</button>
+              <button className="btn-lost" onClick={()=>decideBet(bet,"lost")}>❌ נפל</button>
+            </div>
+          </div>
+        ))}
+        <h2 className="section-title">כל הטפסים</h2>
+        {allBets.map(b=><BetCard key={b.id} bet={b}/>)}
+      </div>}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
+</script>
+</body>
+</html>
