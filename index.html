@@ -9,6 +9,12 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f0c040">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TipZone">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #0f1117; font-family: Heebo, sans-serif; direction: rtl; color: #f0f0f0; }
@@ -668,6 +674,17 @@ function AdminScreen({showToast}) {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App/>);
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('SW registered');
+    }).catch(err => {
+      console.log('SW failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>
